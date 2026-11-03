@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сколько взламывается пароль</title>
+<style>
+:root{--bg:#fff;--s1:#f4f3ee;--s2:#fff;--tx:#1f1e1d;--mu:#6b6a66;--bd:rgba(0,0,0,.16);--ac:#185fa5;--acbg:#e6f1fb;--rd:#a32d2d;--wn:#854f0b;--ok:#3b6d11;--fr:#e24b4a;--fw:#ef9f27;--fo:#639922;--fa:#378add;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1e1d;--s1:#2b2a28;--s2:#262624;--tx:#f0efe8;--mu:#a3a29b;--bd:rgba(255,255,255,.18);--ac:#85b7eb;--acbg:#0c447c;--rd:#f09595;--wn:#fac775;--ok:#97c459;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1f1e1d;--s1:#2b2a28;--s2:#262624;--tx:#f0efe8;--mu:#a3a29b;--bd:rgba(255,255,255,.18);--ac:#85b7eb;--acbg:#0c447c;--rd:#f09595;--wn:#fac775;--ok:#97c459;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.w{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;font-weight:500;margin:0 0 6px}
+h2{font-size:13px;font-weight:400;color:var(--mu);margin:20px 0 8px}
+.mu{color:var(--mu);font-size:14px;margin:0}
+.g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.o{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;font-size:14px;cursor:pointer}
+.o.s2{grid-column:span 2}
+.o.ac{border-color:var(--ac);background:var(--acbg);color:var(--ac)}
+select,input[type=number]{font:inherit;font-size:14px;color:inherit;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-height:40px}
+select{width:100%;margin-bottom:8px}
+input[type=range]{flex:1;min-width:0;accent-color:var(--ac)}
+input[type=number]{width:76px;text-align:center}
+.row{display:flex;align-items:center;gap:12px}
+.err{font-size:13px;color:var(--rd);min-height:18px}
+.card{background:var(--s1);border-radius:8px;padding:14px}
+.card .l{font-size:13px;color:var(--mu)}
+.card .v{font-size:24px;font-weight:500}
+.t{border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--s2)}
+.t.hl{border-color:var(--ac)}
+.t .n{font-size:13px;color:var(--mu)}
+.t .r{font-size:20px;font-weight:500;margin-top:4px}
+.t .r small{display:block;font-size:12px;font-weight:400;color:var(--mu)}
+.bar{height:8px;background:var(--s1);border-radius:4px;overflow:hidden;margin-top:8px}
+.bar div{height:100%;width:0;transition:width .15s}
+.vd{font-size:13px;font-weight:500;margin-top:4px}
+.note{font-size:12px;color:var(--mu);margin-top:16px}
+.dim{opacity:.4;pointer-events:none}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="w">
+<h1>Сколько взламывается пароль</h1>
+<p class="mu">Оценка оффлайн-подбора для случайных паролей и для паролей из слов, даты и хвоста.</p>
+
+<h2>Из чего пароль</h2>
+<div class="g" id="modes"></div>
+
+<div id="sets"><h2>Что есть в пароле</h2><div class="g" id="setl"></div></div>
+
+<div id="wsets">
+<h2>Слова (их число задаёт ползунок ниже)</h2>
+<select id="dict">
+<option value="5000">Частые слова, около 5 тыс.</option>
+<option value="50000" selected>Обычный словарь, около 50 тыс.</option>
+<option value="200000">Большой, со всеми формами, около 200 тыс.</option>
+</select>
+<label class="o"><input type="checkbox" id="wcap"> Заглавные буквы в словах</label>
+<h2>Дата в пароле</h2>
+<label class="o" style="margin-bottom:8px"><input type="checkbox" id="wdate"> В пароле есть дата</label>
+<select id="dtype">
+<option value="100">Год (1950–2030)</option>
+<option value="366">День и месяц (ДДММ)</option>
+<option value="36600" selected>Полная дата (ДДММГГГГ или ДДММГГ)</option>
+</select>
+<h2>Популярный хвост (окончание)</h2>
+<label class="o" style="margin-bottom:8px"><input type="checkbox" id="wtail"> В конце популярный хвост</label>
+<select id="ttype">
+<option value="10">Топ-10: 123, 321, qwe, 111…</option>
+<option value="100" selected>Топ-100: qwerty, password, 12345…</option>
+<option value="1000">Топ-1000: широкий список хвостов</option>
+</select>
+</div>
+
+<h2>Потом пропускаю через хеш (несколько = цепочка)</h2>
+<div class="g" id="hl"></div>
+<p class="mu" id="slow" style="margin-top:8px"></p>
+
+<h2>Длина</h2>
+<div class="row">
+<label for="len" id="lenlabel" class="mu" style="min-width:44px">Длина</label>
+<input type="range" id="len" min="1" max="128" step="1" value="10">
+<input type="number" id="lennum" min="1" max="128" step="1" value="10" inputmode="numeric" aria-label="Длина пароля">
+</div>
+<div class="err" id="lenerr"></div>
+
+<div class="g" style="gap:12px;margin:8px 0 12px">
+<div class="card"><div class="l" id="alphalabel">Алфавит</div><div class="v" id="alpha">62</div></div>
+<div class="card"><div class="l">Энтропия</div><div class="v" id="bits">0 бит</div></div>
+</div>
+<div class="err" id="err"></div>
+
+<div id="tiers"></div>
+
+<p class="note">Полоска: логарифмическая шкала от мгновенного взлома до возраста Вселенной. Оценка: до года лучше сменить, до 10 лет запас мал, до 100 хороший, до 1000 нереалистично, дольше избыточно. Среднее время (половина всех вариантов), оффлайн-подбор, злоумышленник знает хеш. Конструктор: перебор идёт по шаблону, а не по буквам; слова русские латиницей, 3 варианта транслитерации каждого, выбраны случайно и независимо. Дата: год около 100 вариантов, ДДММ 366, полная дата около 36 600. Хвост: из топ-10, 100 или 1000 популярных. Порядок частей считается известным. Если слова осмысленные (имя, кличка, ваш год рождения), реальная прочность ниже. Мегацентр условный: 100 тыс. карт класса RTX 4090 по 300 млрд NTLM/с, такого публично не зафиксировано. Замедление ориентировочное: PBKDF2 600 тыс. итераций, bcrypt cost 12, scrypt N=2¹⁷, Argon2id 64 МиБ. Для сети Bitcoin пересчёт условный: ASIC такие хеши не считают.</p>
+</main>
+<script>
+(function(){
+  var MODES=[['chars','Символы',''],['hex','Hex (0–9, a–f)',''],['words','Конструктор: слова, дата, хвост','ac s2']];
+  var SETS=[['a–z (26)',26,1,''],['A–Z (26)',26,1,''],['0–9 (10)',10,1,''],['Знаки (33)',33,0,''],['Кириллица, оба регистра (66)',66,0,'s2']];
+  var HASH=[['MD5',1,''],['SHA-1',2,''],['SHA-256',5,''],['PBKDF2',1e7,''],['bcrypt',1e8,''],['scrypt',1e9,''],['Argon2id',3e9,'s2']];
+  var TIERS=[['Обычный ПК',1e9,''],['Специализированное, GPU-кластер',1e12,''],['Мегацентр спецслужбы, 100 тыс. GPU',3e16,'hl'],['Вся мощность сети Bitcoin',1e21,'']];
+  var YEAR=31557600, UNIV=Math.log10(13.8e9), LOGMAX=UNIV+Math.log10(YEAR), LOGMIN=-3, TRANSLIT=3;
+  var $=function(id){return document.getElementById(id);};
+  var BASE=TIERS.map(function(t){return t[1];});
+
+  $('modes').innerHTML=MODES.map(function(m,i){return '<label class="o '+m[2]+'"><input type="radio" name="mode" value="'+m[0]+'"'+(i===0?' checked':'')+'> '+m[1]+'</label>';}).join('');
+  $('setl').innerHTML=SETS.map(function(s){return '<label class="o '+s[3]+'"><input type="checkbox" class="cs" data-n="'+s[1]+'"'+(s[2]?' checked':'')+'> '+s[0]+'</label>';}).join('');
+  $('hl').innerHTML=HASH.map(function(h){return '<label class="o '+h[2]+'"><input type="checkbox" class="hs" data-f="'+h[1]+'"> '+h[0]+'</label>';}).join('');
+  $('tiers').innerHTML=TIERS.map(function(t,i){var k=i+1;return '<div class="t '+t[2]+'"><div class="n">'+t[0]+' · <span class="sp"></span></div><div class="r" id="t'+k+'"></div><div class="bar"><div id="b'+k+'"></div></div><div class="vd" id="v'+k+'"></div></div>';}).join('');
+
+  var cbs=document.querySelectorAll('.cs'), hss=document.querySelectorAll('.hs'), radios=document.querySelectorAll('input[name="mode"]');
+  var len=$('len'), lennum=$('lennum'), lenerr=$('lenerr'), lenlabel=$('lenlabel');
+  var dict=$('dict'), wcap=$('wcap'), wdate=$('wdate'), dtype=$('dtype'), wtail=$('wtail'), ttype=$('ttype');
+  var prevMode='chars', charLen=10, wordLen=4;
+  var SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  function sup(n){return String(n).split('').map(function(c){return SUP[c]||c;}).join('');}
+  function pow10(x){return Math.pow(10,x);}
+  function num(x){
+    if(x>=100) return Math.round(x).toLocaleString('ru-RU');
+    if(x>=10) return x.toFixed(1).replace('.',',');
+    return x.toFixed(2).replace('.',',');
+  }
+  function getMode(){var m='chars';radios.forEach(function(r){if(r.checked)m=r.value;});return m;}
+  function fmtSpeed(v){
+    if(v>=1e21) return '10'+sup(Math.round(Math.log10(v)))+'/с';
+    if(v>=1e15) return num(v/1e15)+' квадрлн/с';
+    if(v>=1e12) return num(v/1e12)+' трлн/с';
+    if(v>=1e9) return num(v/1e9)+' млрд/с';
+    if(v>=1e6) return num(v/1e6)+' млн/с';
+    if(v>=1e3) return num(v/1e3)+' тыс./с';
+    return num(v)+'/с';
+  }
+  function fmt(ls){
+    if(ls<-3) return 'мгновенно';
+    if(ls<0) return 'меньше секунды';
+    var s=pow10(ls);
+    if(s<60) return num(s)+' сек';
+    if(s<3600) return num(s/60)+' мин';
+    if(s<86400) return num(s/3600)+' ч';
+    if(s<YEAR) return num(s/86400)+' дн';
+    var ly=ls-Math.log10(YEAR), out;
+    if(ly<3) out=num(pow10(ly))+' лет';
+    else if(ly<6) out=num(pow10(ly-3))+' тыс. лет';
+    else if(ly<9) out=num(pow10(ly-6))+' млн лет';
+    else if(ly<12) out=num(pow10(ly-9))+' млрд лет';
+    else {var e=Math.floor(ly);out=num(pow10(ly-e))+'×10<sup>'+e+'</sup> лет';}
+    if(ly>=UNIV){
+      var r=ly-UNIV;
+      out+='<small>в '+(r<3?num(pow10(r)):'10<sup>'+Math.floor(r)+'</sup>')+' раз дольше возраста Вселенной</small>';
+    }
+    return out;
+  }
+  function applyMode(){
+    var m=getMode(), isW=(m==='words'), wasW=(prevMode==='words');
+    if(isW!==wasW){
+      if(wasW) wordLen=parseInt(len.value,10); else charLen=parseInt(len.value,10);
+      var mx=isW?20:128, mn=isW?0:1;
+      len.max=mx; lennum.max=mx; len.min=mn; lennum.min=mn;
+      len.value=isW?wordLen:charLen; lennum.value=len.value;
+      lenlabel.textContent=isW?'Слов':'Длина';
+      lennum.setAttribute('aria-label',isW?'Число слов':'Длина пароля');
+      lenerr.textContent='';
+    }
+    prevMode=m;
+    var dimC=(m!=='chars');
+    cbs.forEach(function(c){c.disabled=dimC;});
+    $('sets').classList.toggle('dim',dimC);
+    dict.disabled=!isW; wcap.disabled=!isW; wdate.disabled=!isW; wtail.disabled=!isW;
+    dtype.disabled=!(isW&&wdate.checked);
+    ttype.disabled=!(isW&&wtail.checked);
+    $('wsets').classList.toggle('dim',!isW);
+    dtype.style.opacity=dtype.disabled?'.5':'1';
+    ttype.style.opacity=ttype.disabled?'.5':'1';
+  }
+  function update(){
+    var m=getMode(), L=parseInt(len.value,10), F=0, anyH=false;
+    hss.forEach(function(h){if(h.checked){F+=Number(h.getAttribute('data-f'));anyH=true;}});
+    if(!anyH) F=1;
+    var slow=$('slow');
+    if(!anyH) slow.textContent='Хеш не выбран: считаем как быстрый хеш, без замедления.';
+    else if(F<1000) slow.textContent='Замедление подбора: в '+num(F)+' раз.';
+    else slow.innerHTML='Замедление подбора: в 10<sup>'+num(Math.log10(F))+'</sup> раз.';
+    var sps=document.querySelectorAll('.sp');
+    BASE.forEach(function(b,i){sps[i].textContent=fmtSpeed(b/F);});
+
+    var logSpace=0, valid=true, msg='';
+    if(m==='words'){
+      var per=parseInt(dict.value,10)*TRANSLIT*(wcap.checked?2:1);
+      $('alphalabel').textContent='Вариантов на слово';
+      $('alpha').textContent=per.toLocaleString('ru-RU');
+      logSpace=L*Math.log10(per);
+      if(wdate.checked) logSpace+=Math.log10(parseInt(dtype.value,10));
+      if(wtail.checked) logSpace+=Math.log10(parseInt(ttype.value,10));
+      if(logSpace<=0){valid=false;msg='Добавьте слова, дату или хвост.';}
+    } else {
+      var N=0;
+      if(m==='hex') N=16; else cbs.forEach(function(c){if(c.checked)N+=parseInt(c.getAttribute('data-n'),10);});
+      $('alphalabel').textContent='Алфавит';
+      $('alpha').textContent=N;
+      if(N===0){valid=false;msg='Выберите хотя бы один набор символов.';}
+      else logSpace=L*Math.log10(N);
+    }
+    if(!valid){
+      $('err').textContent=msg;
+      $('bits').textContent='0 бит';
+      for(var k=1;k<=4;k++){$('t'+k).textContent='—';$('b'+k).style.width='0%';$('v'+k).textContent='';}
+      return;
+    }
+    $('err').textContent='';
+    $('bits').textContent=Math.round(logSpace/Math.log10(2))+' бит';
+    var logAvg=logSpace-Math.log10(2);
+    BASE.forEach(function(v,i){
+      var ls=logAvg-Math.log10(v/F), k=i+1;
+      $('t'+k).innerHTML=fmt(ls);
+      var pct=Math.round(Math.max(0,Math.min(1,(ls-LOGMIN)/(LOGMAX-LOGMIN)))*100);
+      var b=$('b'+k), vv=$('v'+k), ly=ls-Math.log10(YEAR);
+      b.style.width=pct+'%';
+      var c,t,txt;
+      if(ly<0){c='var(--fr)';t='var(--rd)';txt='Лучше смените!';}
+      else if(ly<1){c='var(--fw)';t='var(--wn)';txt='Запас мал';}
+      else if(ly<2){c='var(--fo)';t='var(--ok)';txt='Хороший запас';}
+      else if(ly<3){c='var(--fo)';t='var(--ok)';txt='Нереалистично взломать';}
+      else {c='var(--fa)';t='var(--ac)';txt='Избыточно';}
+      b.style.background=c; vv.style.color=t; vv.textContent=txt;
+    });
+  }
+  function all(){applyMode();update();}
+  len.addEventListener('input',function(){lennum.value=len.value;lenerr.textContent='';update();});
+  lennum.addEventListener('input',function(){
+    var mx=parseInt(len.max,10), mn=parseInt(len.min,10), raw=lennum.value.trim(), v=Number(raw);
+    if(raw===''||!isFinite(v)||Math.floor(v)!==v||v<mn||v>mx){lenerr.textContent='Введите целое число от '+mn+' до '+mx+'.';return;}
+    lenerr.textContent=''; len.value=v; update();
+  });
+  lennum.addEventListener('blur',function(){lennum.value=len.value;lenerr.textContent='';});
+  cbs.forEach(function(c){c.addEventListener('change',update);});
+  hss.forEach(function(h){h.addEventListener('change',update);});
+  radios.forEach(function(r){r.addEventListener('change',all);});
+  dict.addEventListener('change',update);
+  wcap.addEventListener('change',update);
+  wdate.addEventListener('change',all);
+  wtail.addEventListener('change',all);
+  dtype.addEventListener('change',update);
+  ttype.addEventListener('change',update);
+  all();
+})();
+</script>
+</body>
+</html>
